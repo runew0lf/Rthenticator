@@ -109,7 +109,7 @@ class Window(QMainWindow):
             query = urlsplit(test).query
             params = parse_qs(query)
             start = "/totp/"
-            end = "\?"
+            end = "\\?"
             test = re.search(f'{start}(.*){end}', test).group(1)
             secrets[test] = [params['secret'][0]]
             self.Listbox.addItem(test)
