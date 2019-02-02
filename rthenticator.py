@@ -1,18 +1,18 @@
 import json
+import re
 import sys
 import time
+from urllib.parse import parse_qs, unquote, urlsplit
+
 import pyotp
 import pyperclip
-import re
-from pyzbar.pyzbar import decode
 from PIL import Image
-from urllib.parse import unquote, urlsplit, parse_qs
-
-from PyQt5.QtCore import QTimer
-from PyQt5.QtGui import QIcon, QFont
-from PyQt5.QtWidgets import (QApplication, QDesktopWidget, QFrame, QLabel,
-                             QListWidget, QMainWindow, QProgressBar,
+from PyQt5.QtCore import QTimer, Qt
+from PyQt5.QtGui import QFont, QIcon
+from PyQt5.QtWidgets import (QApplication, QDesktopWidget, QFileDialog, QFrame,
+                             QLabel, QListWidget, QMainWindow, QProgressBar,
                              QPushButton)
+from pyzbar.pyzbar import decode
 
 with open("secrets.json", "r") as fh:
     secrets = json.load(fh)
@@ -37,10 +37,10 @@ class Window(QMainWindow):
 
     def home(self):
         # Button Setup
-        self.btnPipBoy = QPushButton("Set PipBoy Color", self)
-        self.btnPipBoy.move(50, 320)
-        self.btnPipBoy.setStyleSheet("background-color: #737C7D; color: #E9E6E4")
-        self.btnPipBoy.clicked.connect(self.btnPipBoyClicked)
+        self.btnImport = QPushButton("Import", self)
+        self.btnImport.move(50, 320)
+        self.btnImport.setStyleSheet("background-color: #737C7D; color: #E9E6E4")
+        self.btnImport.clicked.connect(self.btnImportClicked)
 
         # Listbox Setup
         self.Listbox = QListWidget(self)
@@ -80,8 +80,10 @@ class Window(QMainWindow):
         self.label.setText("")
         self.label.setFont(QFont("Arial", 30, QFont.Bold))
         self.label.setStyleSheet("color: #E9E6E4")
+        self.label.setTextInteractionFlags(Qt.TextSelectableByMouse)
 
         self.Listbox.setFocus(True)
+        self.listboxClicked()
         self.show()
 
     def progressTimer(self):
@@ -99,15 +101,20 @@ class Window(QMainWindow):
         self.label.setText(str(totp.now()))
         pyperclip.copy(totp.now())
 
-    def btnPipBoyClicked(self):
-        test = unquote(decode(Image.open('test.png'))[0].data.decode("utf-8"))
-        query = urlsplit(test).query
-        params = parse_qs(query)
-        start = "/totp/"
-        end = "\?"
-        test = re.search(f'{start}(.*){end}', test).group(1)
-        print(test)
-        print(params['secret'][0])
+    def btnImportClicked(self):
+        fileName, _ = QFileDialog.getOpenFileName(
+            self, "QFileDialog.getOpenFileName()", "", "All Files (*)")
+        if fileName:
+            test = unquote(decode(Image.open(fileName))[0].data.decode("utf-8"))
+            query = urlsplit(test).query
+            params = parse_qs(query)
+            start = "/totp/"
+            end = "\?"
+            test = re.search(f'{start}(.*){end}', test).group(1)
+            secrets[test] = [params['secret'][0]]
+            self.Listbox.addItem(test)
+            with open('secrets.json', 'w') as fh:
+                json.dump(secrets, fh, sort_keys=True, indent=4)
 
 
 def run():
