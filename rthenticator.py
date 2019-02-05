@@ -11,7 +11,7 @@ from PyQt5.QtCore import QTimer, Qt
 from PyQt5.QtGui import QFont, QIcon
 from PyQt5.QtWidgets import (QApplication, QDesktopWidget, QFileDialog, QFrame,
                              QLabel, QListWidget, QMainWindow, QProgressBar,
-                             QPushButton)
+                             QPushButton, QMenu, QStyle, QSystemTrayIcon, qApp, QAction)
 from pyzbar.pyzbar import decode
 
 with open("secrets.json", "r") as fh:
@@ -36,6 +36,23 @@ class Window(QMainWindow):
         self.home()
 
     def home(self):
+        # Init QSystemTrayIcon
+        self.tray_icon = QSystemTrayIcon(self)
+        self.tray_icon.setIcon(QIcon('icon.ico'))
+        show_action = QAction("Show", self)
+        quit_action = QAction("Exit", self)
+        hide_action = QAction("Hide", self)
+        show_action.triggered.connect(self.show)
+        hide_action.triggered.connect(self.hide)
+        quit_action.triggered.connect(qApp.quit)
+        tray_menu = QMenu()
+        tray_menu.addAction(show_action)
+        tray_menu.addAction(hide_action)
+        tray_menu.addAction(quit_action)
+        self.tray_icon.setContextMenu(tray_menu)
+        self.tray_icon.activated.connect(self.systemIcon)
+        self.tray_icon.show()
+
         # Button Setup
         self.btnImport = QPushButton("Import", self)
         self.btnImport.move(50, 320)
@@ -86,20 +103,38 @@ class Window(QMainWindow):
         self.listboxClicked()
         self.show()
 
-    def progressTimer(self):
-        current_time = int(time.time() % 30)
-        self.progress.setValue(current_time)
-        if current_time == 0:
-            answer = self.Listbox.currentItem().text()
-            totp = pyotp.TOTP(secrets[answer][0])
-            self.label.setText(str(totp.now()))
-            pyperclip.copy(totp.now())
+    # Restore view when tray icon doubleclicked
+    def systemIcon(self, reason):
+        if reason == QSystemTrayIcon.DoubleClick:
+            self.show()
+            self.copy_auth_code()
 
-    def listboxClicked(self):
+    # Override closeEvent, to intercept the window closing event
+    def closeEvent(self, event):
+        event.ignore()
+        self.hide()
+        self.tray_icon.showMessage(
+            "Tray Program",
+            "Application was minimized to Tray",
+            QSystemTrayIcon.Information,
+            2000
+        )
+
+    def copy_auth_code(self):
         answer = self.Listbox.currentItem().text()
         totp = pyotp.TOTP(secrets[answer][0])
         self.label.setText(str(totp.now()))
         pyperclip.copy(totp.now())
+
+    def progressTimer(self):
+        current_time = int(time.time() % 30)
+        self.progress.setValue(current_time)
+        if current_time == 0:
+            if self.isVisible():
+                self.copy_auth_code()
+
+    def listboxClicked(self):
+        self.copy_auth_code()
 
     def btnImportClicked(self):
         fileName, _ = QFileDialog.getOpenFileName(
