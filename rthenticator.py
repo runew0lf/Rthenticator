@@ -3,18 +3,20 @@ import re
 import sys
 import time
 from urllib.parse import parse_qs, unquote, urlsplit
+import os.path
 
 import pyotp
 import pyperclip
 from PIL import Image
 from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtGui import QFont, QIcon
+from PyQt5.QtGui import QFont, QIcon, QPixmap
 from PyQt5.QtWidgets import (QAction, QApplication, QDesktopWidget,
                              QFileDialog, QFrame, QLabel, QListWidget,
                              QMainWindow, QMenu, QMessageBox, QProgressBar,
                              QPushButton, QSystemTrayIcon, qApp)
 from pyzbar.pyzbar import decode
 
+secrets = {}
 with open("secrets.json", "r") as fh:
     secrets = json.load(fh)
 
@@ -105,6 +107,9 @@ class Window(QMainWindow):
         self.label.setStyleSheet("color: #E9E6E4")
         self.label.setTextInteractionFlags(Qt.TextSelectableByMouse)
 
+        self.image = QLabel(self)
+        self.image.setGeometry(300, 40, 150, 150)
+
         self.Listbox.setFocus(True)
         self.listboxClicked()
         self.show()
@@ -146,10 +151,25 @@ class Window(QMainWindow):
             if self.isVisible():
                 self.copy_auth_code()
 
+    def setImage(self):
+        """
+        Reads from the images directory to see if there is a matching logo and must be the same name
+        Splits the text on a `:`
+        png files only
+        """
+        item = self.Listbox.currentItem().text().split(":")[0]
+        fname = f"images/{item}.png"
+        if os.path.isfile(fname):
+            pixmap = QPixmap(fname).scaled(150, 150)
+            self.image.setPixmap(pixmap)
+        else:
+            self.image.setPixmap(QPixmap())
+
     def listboxClicked(self):
         """
         Listbox has been clicked
         """
+        self.setImage()
         self.copy_auth_code()
 
     def btnImportClicked(self):
