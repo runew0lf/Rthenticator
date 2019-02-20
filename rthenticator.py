@@ -182,9 +182,9 @@ class Window(QMainWindow):
         action = menu.exec_(self.Listbox.viewport().mapToGlobal(pos))
         if action == renameAction:
             this_item = self.Listbox.currentItem()
-            self.Listbox.blockSignals(True) # Block signals so we dont trigger the listboxChanged function
-            this_item.setFlags(this_item.flags() | Qt.ItemIsEditable) # Allows us to edit the item
-            self.Listbox.blockSignals(False) # Re-enables signals
+            self.Listbox.blockSignals(True)  # Block signals so we dont trigger the listboxChanged function
+            this_item.setFlags(this_item.flags() | Qt.ItemIsEditable)  # Allows us to edit the item
+            self.Listbox.blockSignals(False)  # Re-enables signals
             self.old_name = this_item.text()
             self.Listbox.edit(self.Listbox.currentIndex())
         if action == deleteAction:
@@ -225,7 +225,7 @@ class Window(QMainWindow):
         self.Listbox.blockSignals(True)  # Block signals so we dont trigger ourselves
         this_item = self.Listbox.currentItem()
         this_item.setFlags(this_item.flags() & ~Qt.ItemIsEditable)  # Turn off the Editable flag
-        self.Listbox.blockSignals(False) # Re-enables signals to be processed
+        self.Listbox.blockSignals(False)  # Re-enables signals to be processed
         secrets[new_name] = secrets.pop(self.old_name)
         with open('secrets.json', 'w') as fh:
             json.dump(secrets, fh, sort_keys=True, indent=4)
