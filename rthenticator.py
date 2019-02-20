@@ -38,7 +38,6 @@ class Window(QMainWindow):
 
     def home(self):
         # Init QSystemTrayIcon
-        self.old_name = ""
         self.tray_icon = QSystemTrayIcon(self)
         self.tray_icon.setIcon(QIcon('icon.ico'))
         show_action = QAction("Show", self)
@@ -76,6 +75,7 @@ class Window(QMainWindow):
         self.Listbox.setContextMenuPolicy(Qt.CustomContextMenu)
         self.Listbox.customContextMenuRequested.connect(self.showMenu)
         self.Listbox.itemChanged.connect(self.listboxChanged)
+        self.old_name = ""
 
         # Frame Setup
         self.Frame = QFrame(self)
@@ -127,12 +127,19 @@ class Window(QMainWindow):
         )
 
     def copy_auth_code(self):
+        """
+        Copies Authentication code to the clipboard
+        """
         answer = self.Listbox.currentItem().text()
         totp = pyotp.TOTP(secrets[answer][0])
         self.label.setText(str(totp.now()))
         pyperclip.copy(totp.now())
 
     def progressTimer(self):
+        """
+        Updates progress timer
+        Copies authentication code to clipboard once timer has reached 0 and main window is not in system tray
+        """
         current_time = int(time.time() % 30)
         self.progress.setValue(current_time)
         if current_time == 0:
@@ -140,9 +147,15 @@ class Window(QMainWindow):
                 self.copy_auth_code()
 
     def listboxClicked(self):
+        """
+        Listbox has been clicked
+        """
         self.copy_auth_code()
 
     def btnImportClicked(self):
+        """
+        Imports a QR-code png file and add its to secrets.json
+        """
         fileName, _ = QFileDialog.getOpenFileName(
             self, "QFileDialog.getOpenFileName()", "", "All Files (*)")
         if fileName:
@@ -158,21 +171,29 @@ class Window(QMainWindow):
                 json.dump(secrets, fh, sort_keys=True, indent=4)
 
     def showMenu(self, pos):
+        """
+        Displays right click context menu, with 2 options
+        - Rename - Allows us to rename an entry
+        - Delete - Aloows us to remove and entry
+        """
         menu = QMenu()
         renameAction = menu.addAction("Rename")
         deleteAction = menu.addAction("Delete")
         action = menu.exec_(self.Listbox.viewport().mapToGlobal(pos))
         if action == renameAction:
             this_item = self.Listbox.currentItem()
-            self.Listbox.blockSignals(True)
-            this_item.setFlags(this_item.flags() | Qt.ItemIsEditable)
-            self.Listbox.blockSignals(False)
+            self.Listbox.blockSignals(True) # Block signals so we dont trigger the listboxChanged function
+            this_item.setFlags(this_item.flags() | Qt.ItemIsEditable) # Allows us to edit the item
+            self.Listbox.blockSignals(False) # Re-enables signals
             self.old_name = this_item.text()
             self.Listbox.edit(self.Listbox.currentIndex())
         if action == deleteAction:
             self.showMessageBox()
 
     def showMessageBox(self):
+        """
+        Creates and displays a message box for delete confirmation
+        """
         box = QMessageBox()
         box.setIcon(QMessageBox.Question)
         box.setWindowTitle('Warning!')
@@ -197,11 +218,14 @@ class Window(QMainWindow):
                     json.dump(secrets, fh, sort_keys=True, indent=4)
 
     def listboxChanged(self):
+        """
+        Called when we have changed text of an item in the listbox
+        """
         new_name = self.Listbox.currentItem().text()
-        self.Listbox.blockSignals(True)
+        self.Listbox.blockSignals(True)  # Block signals so we dont trigger ourselves
         this_item = self.Listbox.currentItem()
-        this_item.setFlags(this_item.flags() & ~Qt.ItemIsEditable)
-        self.Listbox.blockSignals(False)
+        this_item.setFlags(this_item.flags() & ~Qt.ItemIsEditable)  # Turn off the Editable flag
+        self.Listbox.blockSignals(False) # Re-enables signals to be processed
         secrets[new_name] = secrets.pop(self.old_name)
         with open('secrets.json', 'w') as fh:
             json.dump(secrets, fh, sort_keys=True, indent=4)
