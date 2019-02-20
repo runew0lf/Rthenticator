@@ -11,7 +11,7 @@ from PyQt5.QtCore import QTimer, Qt
 from PyQt5.QtGui import QFont, QIcon
 from PyQt5.QtWidgets import (QApplication, QDesktopWidget, QFileDialog, QFrame,
                              QLabel, QListWidget, QMainWindow, QProgressBar,
-                             QPushButton, QMenu, QStyle, QSystemTrayIcon, qApp, QAction)
+                             QPushButton, QMenu, QSystemTrayIcon, qApp, QAction)
 from pyzbar.pyzbar import decode
 
 with open("secrets.json", "r") as fh:
@@ -37,6 +37,7 @@ class Window(QMainWindow):
 
     def home(self):
         # Init QSystemTrayIcon
+        self.old_name = ""
         self.tray_icon = QSystemTrayIcon(self)
         self.tray_icon.setIcon(QIcon('icon.ico'))
         show_action = QAction("Show", self)
@@ -70,6 +71,10 @@ class Window(QMainWindow):
             self.Listbox.addItem(key)
         self.Listbox.setCurrentRow(0)
         self.Listbox.currentItem().setSelected(True)
+        # Listview context menu
+        self.Listbox.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.Listbox.customContextMenuRequested.connect(self.showMenu)
+        self.Listbox.itemChanged.connect(self.listboxChanged)
 
         # Frame Setup
         self.Frame = QFrame(self)
@@ -150,6 +155,28 @@ class Window(QMainWindow):
             self.Listbox.addItem(test)
             with open('secrets.json', 'w') as fh:
                 json.dump(secrets, fh, sort_keys=True, indent=4)
+
+    def showMenu(self, pos):
+        menu = QMenu()
+        renameAction = menu.addAction("Rename")
+        action = menu.exec_(self.Listbox.viewport().mapToGlobal(pos))
+        if action == renameAction:
+            this_item = self.Listbox.currentItem()
+            self.Listbox.blockSignals(True)
+            this_item.setFlags(this_item.flags() | Qt.ItemIsEditable)
+            self.Listbox.blockSignals(False)
+            self.old_name = this_item.text()
+            self.Listbox.edit(self.Listbox.currentIndex())
+
+    def listboxChanged(self):
+        new_name = self.Listbox.currentItem().text()
+        self.Listbox.blockSignals(True)
+        this_item = self.Listbox.currentItem()
+        this_item.setFlags(this_item.flags() & ~Qt.ItemIsEditable)
+        self.Listbox.blockSignals(False)        
+        secrets[new_name] = secrets.pop(self.old_name)
+        with open('secrets.json', 'w') as fh:
+            json.dump(secrets, fh, sort_keys=True, indent=4)
 
 
 def run():
