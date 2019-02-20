@@ -7,11 +7,12 @@ from urllib.parse import parse_qs, unquote, urlsplit
 import pyotp
 import pyperclip
 from PIL import Image
-from PyQt5.QtCore import QTimer, Qt
+from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QFont, QIcon
-from PyQt5.QtWidgets import (QApplication, QDesktopWidget, QFileDialog, QFrame,
-                             QLabel, QListWidget, QMainWindow, QProgressBar,
-                             QPushButton, QMenu, QSystemTrayIcon, qApp, QAction)
+from PyQt5.QtWidgets import (QAction, QApplication, QDesktopWidget,
+                             QFileDialog, QFrame, QLabel, QListWidget,
+                             QMainWindow, QMenu, QMessageBox, QProgressBar,
+                             QPushButton, QSystemTrayIcon, qApp)
 from pyzbar.pyzbar import decode
 
 with open("secrets.json", "r") as fh:
@@ -159,6 +160,7 @@ class Window(QMainWindow):
     def showMenu(self, pos):
         menu = QMenu()
         renameAction = menu.addAction("Rename")
+        deleteAction = menu.addAction("Delete")
         action = menu.exec_(self.Listbox.viewport().mapToGlobal(pos))
         if action == renameAction:
             this_item = self.Listbox.currentItem()
@@ -167,6 +169,32 @@ class Window(QMainWindow):
             self.Listbox.blockSignals(False)
             self.old_name = this_item.text()
             self.Listbox.edit(self.Listbox.currentIndex())
+        if action == deleteAction:
+            self.showMessageBox()
+
+    def showMessageBox(self):
+        box = QMessageBox()
+        box.setIcon(QMessageBox.Question)
+        box.setWindowTitle('Warning!')
+        box.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+        box.setStyleSheet("background-color: #2F3031;")
+        box.setText("<FONT COLOR='#E9E6E4'>Do you really wish to delete this?</FONT>")
+        btnYes = box.button(QMessageBox.Yes)
+        btnYes.setStyleSheet("background-color: #737C7D; color: #E9E6E4")
+        btnYes.setText('Yes')
+        btnNo = box.button(QMessageBox.No)
+        btnNo.setStyleSheet("background-color: #737C7D; color: #E9E6E4")
+        btnNo.setText('No')
+        box.exec_()
+
+        if box.clickedButton() == btnYes:
+            items = self.Listbox.selectedItems()
+            for item in items:
+                new_name = item.text()
+                self.Listbox.takeItem(self.Listbox.row(item))
+                secrets.pop(new_name)
+                with open('secrets.json', 'w') as fh:
+                    json.dump(secrets, fh, sort_keys=True, indent=4)
 
     def listboxChanged(self):
         new_name = self.Listbox.currentItem().text()
