@@ -173,7 +173,7 @@ class Window(QMainWindow):
         self.Listbox.blockSignals(True)
         this_item = self.Listbox.currentItem()
         this_item.setFlags(this_item.flags() & ~Qt.ItemIsEditable)
-        self.Listbox.blockSignals(False)        
+        self.Listbox.blockSignals(False)
         secrets[new_name] = secrets.pop(self.old_name)
         with open('secrets.json', 'w') as fh:
             json.dump(secrets, fh, sort_keys=True, indent=4)
